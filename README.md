@@ -1,6 +1,6 @@
 # ScrapyProject
 
-# 项目一：爬取图书网站书本信息 #
+# 项目一：toscrape_book（爬取图书网站书本信息） #
 ## 1 项目需求 ##
 	爬取http://books.toscrape.com网站中的书籍信息
 ### (1) 每本书籍信息包括 ###

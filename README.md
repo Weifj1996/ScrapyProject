@@ -161,7 +161,7 @@
 	    file_urls = scrapy.Field()
 	    files = scrapy.Field()
 	
-	4. 实现书籍列表页面的解析函数
+	4. 实现页面的解析函数
 	# -*-coding:utf-8-*-
 	import scrapy
 	from scrapy.linkextractors import LinkExtractor
@@ -219,4 +219,81 @@
 
 ## 4 运行爬虫
      scrapy crawl examples -o examples.json
+
+
+
+
+
+
+# 项目三：art_image（下载360图片） #
+## 1 项目需求 ##
+
+	下载http://image.so.com网站中艺术分类下的所有图片到本地。
+
+## 2 页面分析 ##
+
+	页面中向下滚动鼠标滚轮，便会有更多图片加载出来，图片加载是由JavaScript脚本完成的，其响应结果是一个json串
+	
+	第1次加载：https://image.so.com/zjl?ch=art&sn=0
+	第2次加载：https://image.so.com/zjl?ch=art&sn=30
+	第3次加载：https://image.so.com/zjl?ch=art&sn=60
+	
+	sn参数　从第几张图片开始加载，即结果列表中第一张图片在服务器端的序号。
+
+## 3 编码实现 ##
+	1.创建scrapy项目，取名为art_image
+    
+	scrapy startproject art_image
+	
+	2.创建Spider文件以及Spider类，可以使用scrapy genspider <SPIDER_NAME><DOMAIN>命令生成模板
+	
+	cd art_image
+	scrapy genspider images image.so.com	
+	
+	3. 实现ExampleItem，需定义file_urls和files两个字段
+	
+	class ExampleItem(scrapy.Item):
+	    file_urls = scrapy.Field()
+	    files = scrapy.Field()
+	
+	4. 实现下载的解析函数
+	# -*- coding:utf-8 -*-
+	import scrapy
+	from scrapy import Request
+	import json
+	
+	
+	class ImagesSpider(scrapy.Spider):
+	    name = 'images'
+	    allowed_domains = ['image.so.com']
+	    BASE_URL = 'https://image.so.com/zjl?ch=beauty&sn=%s'
+	    start_urls = [BASE_URL % 0]
+	    start_index = 0
+	
+	    # 限制最大下载数量，防止磁盘用量过大
+	    MAX_DOWNLOAD_NUM = 300
+	
+	    def parse(self, response):
+	        # 使用JSON模块解析响应结果
+	        infos = json.loads(response.body.decode('utf-8'))
+	
+	        # 提取所有图片下载url到一个列表，赋给item的'image_urls'字段
+	        yield {'image_urls': [info['qhimg_url'] for info in infos['list']]}
+	
+	        # 如count字段大于0，并且下载数量不足MAX_DOWNLOAD_NUM，继续获取下一页
+	        self.start_index += infos['count']
+	        if infos['count'] > 0 and self.start_index < self.MAX_DOWNLOAD_NUM:
+	            yield Request(self.BASE_URL % self.start_index)
+
+	5. 配置文件settings.py
+		
+		# 启动ImagesPipeline 并指定下载目录
+		ITEM_PIPELINES = {
+		    'scrapy.pipelines.images.ImagesPipeline': 1,
+		}
+		IMAGES_STORE = 'download_images'
+				
+
+## 4 运行爬虫
+     scrapy crawl images
 
